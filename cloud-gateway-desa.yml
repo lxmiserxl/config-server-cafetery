@@ -1,0 +1,86 @@
+# Eureka Client Config
+eureka:
+  instance:
+    preferIpAddress: true
+    hostname: ${EUREKA.INSTANCE.HOSTNAME:192.168.40.72} #localhost   
+    instance-id: ${spring.application.name}:${server.port}
+    ip-address: ${EUREKA.INSTANCE.IP_ADDRESS:192.168.40.72} #localhost
+    leaseRenewalIntervalInSeconds: 60     # Intervalo en que los servicios renuevan su lease
+    leaseExpirationDurationInSeconds: 180  # Tiempo de expiración si un servicio no renueva su lease
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    eurekaServerConnectTimeoutSeconds: 10      # Tiempo de espera para conectarse al servidor Eureka
+    eurekaServerReadTimeoutSeconds: 30         # Tiempo de espera para leer la respuesta del servidor
+    eurekaServerRetryCount: 5                 # Número de reintentos en caso de fallo
+    eurekaServerRetryIntervalSeconds: 2       # Intervalo entre reintentos
+    serviceUrl:
+      defaultZone: ${EUREKA.SERVER.HOSTNAME:http://192.168.40.72:8761/eureka}
+
+# Actuator Config
+info:
+  app:
+    name: ${spring.application.name}
+    description: MicroServicio Gateway
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+      base-path: /actuator
+  info:
+    env:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  metrics:
+    tags:
+      enabled: true
+  prometheus:
+    enabled: true
+
+# Gateway Config
+spring:
+  cloud:
+    circuitbreaker:
+      enabled: true
+      resilience4j:
+        config:
+          default:
+            timeout:
+              duration: 1000ms
+              enabled: true
+    loadbalancer:
+      retry:
+        enabled: true
+        max-attempts: 5
+        backoff:
+          multiplier: 1.5
+          max-interval: 3000
+    gateway:
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+            allowedHeaders: "*"
+            #allowCredentials: false
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 5000
+      discovery:
+        locator:
+          enabled: true  # Habilita el descubrimiento automático de servicios en Eureka
+      routes:
+        - id: mcs-cama
+          uri: lb://MCS-CAMA
+          predicates:
+            - Path=/v1/mcs-cama/**
+          filters:
+            - StripPrefix=2
